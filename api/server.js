@@ -1,60 +1,49 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import fileUpload from "express-fileupload";
-import cookieParser from 'cookie-parser';
-
-
-
-dotenv.config();
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import authRoute from "./routes/auth.route.js";
+import parkingRoute from "./routes/parking.route.js";
+import bookingRoute from "./routes/booking.route.js";
+// import chatRoute from "./routes/chat.route.js";
+import userRoute from "./routes/user.route.js";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+dotenv.config();
 mongoose.set("strictQuery", true);
-
-
-
-
-app.use(
-  cors({
-    origin: `http://localhost:5173`,
-    methods: ["GET", "POST", "DELETE", "PUT","OPTIONS"],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
-  })
-);
-app.use(
-  fileUpload({
-    useTempFiles: true,
-    tempFileDir: "/tmp/",
-  })
-);
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-
-
-app.use('/api/leaderboard', leaderboardRoutes);
 
 const connect = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("Connected to mongoDB!");
+    await mongoose.connect(process.env.MONGO);
+    console.log("Connected to MongoDB!");
   } catch (error) {
-    console.log(error);
+    console.error("MongoDB connection error:", error);
   }
 };
+
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use(express.json());
+app.use(cookieParser());
+
+app.use("/api/auth", authRoute);
+app.use("/api/parking", parkingRoute);
+app.use("/api/booking", bookingRoute);
+// app.use("/api/chat", chatRoute);
+app.use("/api/user", userRoute);
 
 app.use((err, req, res, next) => {
   const errorStatus = err.status || 500;
   const errorMessage = err.message || "Something went wrong!";
-
-  return res.status(errorStatus).send(errorMessage);
+  return res.status(errorStatus).json({ message: errorMessage });
 });
 
-app.listen(5000, () => {
+app.listen(process.env.PORT, () => {
   connect();
   console.log("Backend server is running!");
 });

@@ -6,15 +6,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'purple': '#9C27B0',
-        'hover-purple': '#7B1FA2',
-        'yellow': '#FFC107',
-        'tertiary': '#D9D9D9',
-        'quaternary': '#BFBFBF',
-        'quinary': '#8C8C8C',
-        'senary': '#595959',
-        'septenary': '#262626',
-        'octonary': '#000000',
+        primaryYellow: '#FFD700',
+        primaryRed: '#FF4500',
+        primaryBlue: '#1E90FF',
+        primaryGreen: '#32CD32',
+        backgroundWhite: '#FFFFFF'
       },
       fontFamily: {
         'sans': ['Poppins', 'sans-serif'],

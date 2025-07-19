@@ -1,46 +1,33 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar.jsx';
+import Footer from './components/Footer.jsx';
+import Home from './pages/Home.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/Register.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import ParkingList from './pages/ParkingList.jsx';
+import Booking from './pages/Booking.jsx';
+import Profile from './pages/Profile.jsx';
+// import Chat from './pages/Chat.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
-import { library } from "@fortawesome/fontawesome-svg-core";
-import { fas } from "@fortawesome/free-solid-svg-icons";
-library.add(fas);
-
-// import 'index.css';
-
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Initialize to false
-
-  useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser ");
-    if (currentUser) {
-      setIsAuthenticated(true);
-    } else{
-      setIsAuthenticated(false); // Set to false if no user is found
-    }
-  }, [isAuthenticated]);
-
-  const queryClient = new QueryClient();
+function App() {
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col">
-        <Navbar/>
-        <div className="flex-grow pt-20"> 
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/register" element={<Register />} />
-           
-            
-          </Routes>
-        </div>
-        {/* <Footer />  */}
-      </div>
-    </Router>
+    <div className="min-h-screen bg-backgroundWhite">
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/parking" element={<ParkingList />} />
+        <Route path="/booking/:parkingId" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        {/* <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} /> */}
+      </Routes>
+      <Footer />
+    </div>
   );
-};
+}
 
 export default App;
