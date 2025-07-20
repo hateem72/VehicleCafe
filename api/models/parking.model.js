@@ -6,17 +6,6 @@ const ParkingSchema = new mongoose.Schema({
     ref: "User",
     required: true
   },
-  location: {
-    type: {
-      type: String,
-      enum: ["Point"],
-      required: true
-    },
-    coordinates: {
-      type: [Number],
-      required: true
-    }
-  },
   address: {
     type: String,
     required: true
@@ -30,9 +19,16 @@ const ParkingSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  surgeMultiplier: {
-    type: Number,
-    default: 1
+  location: {
+    type: {
+      type: String,
+      enum: ["Point"],
+      required: true
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
   },
   images: [{
     url: String,
@@ -42,12 +38,17 @@ const ParkingSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  surgeMultiplier: {
+    type: Number,
+    default: 1
+  },
   averageDuration: {
     type: Number,
     default: 0
   }
 }, { timestamps: true });
 
+// Index for geospatial queries
 ParkingSchema.index({ location: "2dsphere" });
 
 export default mongoose.model("Parking", ParkingSchema);

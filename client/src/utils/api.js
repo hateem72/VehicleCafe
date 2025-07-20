@@ -13,7 +13,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const errorMessage =
-      error.response?.data?.error ||
       error.response?.data?.message ||
       error.message ||
       'An unexpected error occurred';
@@ -37,6 +36,7 @@ export const loginUser = async (credentials) => {
   const { token } = response.data;
   if (token) {
     Cookies.set('accessToken', token, { sameSite: 'lax' });
+    localStorage.setItem('userId', response.data._id);
     window.dispatchEvent(new Event('authChange'));
   }
   return response.data;
@@ -45,6 +45,7 @@ export const loginUser = async (credentials) => {
 export const logoutUser = async () => {
   const response = await api.post('/api/auth/logout');
   Cookies.remove('accessToken');
+  localStorage.removeItem('userId');
   window.dispatchEvent(new Event('authChange'));
   return response.data;
 };
@@ -66,8 +67,25 @@ export const getNearbyParking = async (params) => {
   return response.data;
 };
 
+export const getAllParking = async () => {
+  const response = await api.get('/api/parking/all');
+  return response.data;
+};
+
+export const createParking = async (formData) => {
+  const response = await api.post('/api/parking/create', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response.data;
+};
+
 export const createBooking = async (data) => {
   const response = await api.post('/api/booking', data);
+  return response.data;
+};
+
+export const checkInOut = async ({ bookingId, status }) => {
+  const response = await api.put('/api/booking/checkinout', { bookingId, status });
   return response.data;
 };
 

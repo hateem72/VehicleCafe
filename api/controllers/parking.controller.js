@@ -5,8 +5,12 @@ import { uploadToImageKit } from "../utils/imagekit.js";
 
 export const createParking = async (req, res, next) => {
   try {
-    const { address, vehicleType, pricePerHour, location } = req.body;
+    const { address, vehicleType, pricePerHour, lat, lng } = req.body;
     if (req.userRole !== "owner") return next(createError(403, "Only owners can create parking!"));
+
+    if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+      return next(createError(400, "Valid latitude and longitude are required"));
+    }
 
     const images = req.files ? await Promise.all(req.files.map(file => uploadToImageKit(file))) : [];
 
@@ -17,7 +21,7 @@ export const createParking = async (req, res, next) => {
       pricePerHour,
       location: {
         type: "Point",
-        coordinates: [parseFloat(location.lng), parseFloat(location.lat)]
+        coordinates: [parseFloat(lng), parseFloat(lat)]
       },
       images
     });
@@ -25,6 +29,7 @@ export const createParking = async (req, res, next) => {
     await parking.save();
     res.status(201).json(parking);
   } catch (err) {
+    console.error("Error creating parking:", err);
     next(err);
   }
 };
@@ -34,9 +39,8 @@ export const getNearbyParking = async (req, res, next) => {
     const { lat, lng, vehicleType, maxDistance, timeOfDay } = req.query;
     const user = await User.findById(req.userId);
     const hour = new Date().getHours();
-    const isPeakHour = hour >= 8 && hour <= 18; // Example: Peak hours 8 AM - 6 PM
+    const isPeakHour = hour >= 8 && hour <= 18;
 
-    // Recommendation logic
     let query = {
       location: {
         $near: {
@@ -53,14 +57,13 @@ export const getNearbyParking = async (req, res, next) => {
       query.vehicleType = { $in: preferredTypes.length ? preferredTypes : ["small", "medium", "large"] };
     }
     if (timeOfDay || isPeakHour) {
-      query.surgeMultiplier = { $gte: isPeakHour ? 1.2 : 1 }; // Adjust for peak hours
+      query.surgeMultiplier = { $gte: isPeakHour ? 1.2 : 1 };
     }
 
     const parkingSpots = await Parking.find(query)
       .populate("owner", "username ratings")
       .limit(10);
 
-    // Update average duration
     for (let spot of parkingSpots) {
       const bookings = await Booking.find({ parking: spot._id });
       if (bookings.length) {
@@ -72,6 +75,17 @@ export const getNearbyParking = async (req, res, next) => {
 
     res.status(200).json(parkingSpots);
   } catch (err) {
+    next(err);
+  }
+};
+
+export const getAllParking = async (req, res, next) => {
+  try {
+    const parkingSpots = await Parking.find({ availability: true })
+      .populate("owner", "username ratings");
+    res.status(200).json(parkingSpots);
+  } catch (err) {
+    console.error("Error fetching all parking:", err);
     next(err);
   }
 };
