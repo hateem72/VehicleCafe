@@ -14,6 +14,13 @@ const ParkingSchema = new mongoose.Schema({
     type: String,
     required: true  
   },
+   heading: {
+    type: String,
+    required: true,
+    default: "Parking Spot",
+    minlength: 5,
+    maxlength: 100
+  },
   vehicleType: {
     type: String,
     enum: ["small", "medium", "large"],

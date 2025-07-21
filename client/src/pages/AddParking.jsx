@@ -1,14 +1,14 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMapsContext } from '../components/GoogleMapsProvider.jsx';
 import { createParking } from '../utils/api.js';
-import { FaMapMarkerAlt, FaCar, FaDollarSign, FaImage, FaInfoCircle } from 'react-icons/fa';
-
-const libraries = ['places'];
+import { FaMapMarkerAlt, FaCar, FaRupeeSign, FaImage, FaInfoCircle, FaHeading } from 'react-icons/fa';
+import axios from 'axios';
 
 function AddParking() {
+  const { isLoaded } = useContext(GoogleMapsContext);
   const [formData, setFormData] = useState({
+    heading: '',
     address: '',
     vehicleType: 'small',
     pricePerHour: '',
@@ -21,25 +21,34 @@ function AddParking() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const autocompleteRef = useRef(null);
-
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries
-  });
+  const autocompleteInputRef = useRef(null);
 
   useEffect(() => {
-    if (formData.useCurrentLocation) {
+    if (formData.useCurrentLocation && isLoaded) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData({
-            ...formData,
-            lat: position.coords.latitude.toString(),
-            lng: position.coords.longitude.toString(),
-            address: formData.address || 'Current Location'
-          });
-          setErrors({ ...errors, location: '' });
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const response = await axios.get(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+            );
+            const address = response.data.results[0]?.formatted_address || 'Current Location';
+            setFormData({
+              ...formData,
+              lat: latitude.toString(),
+              lng: longitude.toString(),
+              address
+            });
+            setErrors({ ...errors, location: '' });
+          } catch (err) {
+            setFormData({
+              ...formData,
+              lat: latitude.toString(),
+              lng: longitude.toString(),
+              address: 'Current Location'
+            });
+            setErrors({ ...errors, location: 'Failed to fetch address. Using coordinates.' });
+          }
         },
         () => {
           setFormData({
@@ -47,18 +56,18 @@ function AddParking() {
             useCurrentLocation: false,
             lat: '37.7749',
             lng: '-122.4194',
-            address: formData.address || 'San Francisco, CA'
+            address: 'San Francisco, CA'
           });
           setErrors({ ...errors, location: 'Geolocation access denied. Using default location (San Francisco).' });
         }
       );
     }
-  }, [formData.useCurrentLocation]);
+  }, [formData.useCurrentLocation, isLoaded]);
 
-  const onPlaceChanged = () => {
-    if (autocompleteRef.current) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.geometry) {
+  const handlePlaceChanged = () => {
+    if (autocompleteInputRef.current) {
+      const place = autocompleteInputRef.current.getPlace();
+      if (place?.geometry) {
         setFormData({
           ...formData,
           address: place.formatted_address,
@@ -75,6 +84,7 @@ function AddParking() {
 
   const validateForm = () => {
     const newErrors = {};
+    if (!formData.heading.trim()) newErrors.heading = 'Heading is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.pricePerHour || formData.pricePerHour <= 0) {
       newErrors.pricePerHour = 'Price per hour must be a positive number';
@@ -113,6 +123,7 @@ function AddParking() {
 
     try {
       const data = new FormData();
+      data.append('heading', formData.heading);
       data.append('address', formData.address);
       data.append('vehicleType', formData.vehicleType);
       data.append('pricePerHour', formData.pricePerHour);
@@ -143,6 +154,20 @@ function AddParking() {
       <div className="space-y-6">
         <div>
           <label className="block text-primaryBlue font-semibold mb-2 flex items-center">
+            <FaHeading className="mr-2" /> Heading
+          </label>
+          <input
+            type="text"
+            name="heading"
+            value={formData.heading}
+            onChange={handleChange}
+            placeholder="Enter parking title (e.g., Downtown Secure Parking)"
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primaryYellow transition ${errors.heading ? 'border-primaryRed' : 'border-gray-300'}`}
+          />
+          {errors.heading && <p className="text-primaryRed text-sm mt-1">{errors.heading}</p>}
+        </div>
+        <div>
+          <label className="block text-primaryBlue font-semibold mb-2 flex items-center">
             <FaMapMarkerAlt className="mr-2" /> Use Current Location
           </label>
           <input
@@ -159,33 +184,28 @@ function AddParking() {
             <label className="block text-primaryBlue font-semibold mb-2 flex items-center">
               <FaMapMarkerAlt className="mr-2" /> Search Address
             </label>
-            <Autocomplete
-              onLoad={autocomplete => (autocompleteRef.current = autocomplete)}
-              onPlaceChanged={onPlaceChanged}
-            >
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                placeholder="Enter parking address"
-                className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primaryYellow transition ${errors.address ? 'border-primaryRed' : 'border-gray-300'}`}
-              />
-            </Autocomplete>
+            <google-maps-place-autocomplete-element
+              ref={autocompleteInputRef}
+              onPlaceChange={handlePlaceChanged}
+              input-class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primaryYellow transition"
+              input-placeholder="Enter parking address"
+              value={formData.address}
+              onInput={(e) => setFormData({ ...formData, address: e.target.value })}
+            ></google-maps-place-autocomplete-element>
             {errors.address && <p className="text-primaryRed text-sm mt-1">{errors.address}</p>}
           </div>
         )}
         {formData.useCurrentLocation && (
           <div>
             <label className="block text-primaryBlue font-semibold mb-2 flex items-center">
-              <FaMapMarkerAlt className="mr-2" /> Address (Optional)
+              <FaMapMarkerAlt className="mr-2" /> Address
             </label>
             <input
               type="text"
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="Enter address (optional for current location)"
+              placeholder="Enter address (auto-filled from current location)"
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primaryYellow transition border-gray-300"
             />
           </div>
@@ -221,14 +241,14 @@ function AddParking() {
         </div>
         <div>
           <label className="block text-primaryBlue font-semibold mb-2 flex items-center">
-            <FaDollarSign className="mr-2" /> Price per Hour ($)
+            <FaRupeeSign className="mr-2" /> Price per Hour (₹)
           </label>
           <input
             type="number"
             name="pricePerHour"
             value={formData.pricePerHour}
             onChange={handleChange}
-            placeholder="Enter price per hour"
+            placeholder="Enter price per hour in Rupees"
             className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primaryYellow transition ${errors.pricePerHour ? 'border-primaryRed' : 'border-gray-300'}`}
           />
           {errors.pricePerHour && <p className="text-primaryRed text-sm mt-1">{errors.pricePerHour}</p>}
@@ -248,7 +268,15 @@ function AddParking() {
           {formData.images.length > 0 && (
             <div className="flex gap-2 mt-2">
               {formData.images.map((img, index) => (
-                <img key={index} src={URL.createObjectURL(img)} alt="Preview" className="w-20 h-20 object-cover rounded" />
+                <div key={index} className="relative">
+                  <img src={URL.createObjectURL(img)} alt="Preview" className="w-20 h-20 object-cover rounded" />
+                  <button
+                    onClick={() => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) })}
+                    className="absolute top-0 right-0 bg-primaryRed text-backgroundWhite rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                  >
+                    X
+                  </button>
+                </div>
               ))}
             </div>
           )}
