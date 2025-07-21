@@ -5,7 +5,7 @@ import { uploadToImageKit } from "../utils/imagekit.js";
 
 export const createParking = async (req, res, next) => {
   try {
-    const { address, vehicleType, pricePerHour, lat, lng } = req.body;
+    const { address, vehicleType, description,pricePerHour, lat, lng } = req.body;
     if (req.userRole !== "owner") return next(createError(403, "Only owners can create parking!"));
 
     if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
@@ -17,6 +17,7 @@ export const createParking = async (req, res, next) => {
     const parking = new Parking({
       owner: req.userId,
       address,
+      description,
       vehicleType,
       pricePerHour,
       location: {

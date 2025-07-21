@@ -10,6 +10,10 @@ const ParkingSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  description: {
+    type: String,
+    required: true  
+  },
   vehicleType: {
     type: String,
     enum: ["small", "medium", "large"],
